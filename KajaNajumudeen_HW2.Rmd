@@ -1,0 +1,222 @@
+---
+title: "Homework 2"
+author: "Mohamat Eirban Ali"
+date: "September 7, 2019"
+output: pdf_document
+---
+
+
+```{r}
+
+# Homework 2
+#load library
+library('ggplot2')
+library('tidyverse')
+library('naniar')
+library('gridExtra')
+library('Amelia')
+library('VIM')
+library('mice')
+library('dplyr')
+library('ggthemes')
+
+#Problem 1
+#Problem 1a
+# Answering questions from Chapter 3 'R for Data Science'
+#3.2.5 Exercise 4
+# Answer:
+ggplot(mpg, aes(x=cyl, y=hwy)) + 
+  geom_point()
+# Scatter plot for hwy vs cyl
+
+#3.2.4 Exercise 5
+# Answer:
+ggplot(mpg, aes(x=class, y=drv)) + 
+  geom_point()
+# Scatter plot for drv vs class but it is kinda worthless to use this plot to 
+# analyze data as many of the data are overlapping because both class and drv 
+# variable are categorical in nature
+
+#3.3.1 Exercise 3
+# Answer:
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, colour = cty))
+# ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, shape = cty)) ==Error: A continuous variable can not be mapped to shape
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, size = cty))
+# For both colour and size, the continuous variable relates to it by 
+# saturation and area size respectively.Instead for categorical variable, 
+# it both colour and size will have a set outcome for each category instead of a scale.
+
+#3.3.1 Exercise 4
+# Answer:
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, colour = cty, size = cty))
+# Seems like it does work, as long as both aesthetic corresponds to each other 
+# to describe the variable. 
+
+#3.3.1 Exercise 5
+# Answer: Stroke controls the width of the border of certain shapes that 
+# have border attribute.
+
+#3.5.1 Exercise 4
+# Answer:Faceting help us focus the trendline or pattern for each group 
+# instead of an overall distribution while the colour aesthetic gives us 
+# an overall pattern of the distribution. If we have a large number of groups, 
+# colours will not be able discretize them much as they are limited while facets 
+# will not do well trend comparison between the groups.
+
+#Problem 1b
+ggplot(data = mpg) + 
+  geom_point(alpha=0.2, position='jitter', mapping = aes(x = displ, y = hwy)) +
+  facet_wrap(~ drv, nrow = 1) + 
+  geom_smooth(mapping = aes(x = displ, y = hwy)) +
+  geom_smooth(mapping = aes(x = displ, y = hwy), method = 'lm', colour = 'black',se=F) +
+  labs(x="Displacement", y="Highway MPG")
+
+#Problem 2
+#Problem 2a
+set.seed(100)
+#seed for random generator
+df <- data.frame("a" = rnorm(1:500), "b" = rbinom(1:500, 9, 0.64), "c" = rexp(10,1/25), "d" = rexp(500,1/25))
+df2 <- df %>% gather(groupVar, values, a, b, c, d)
+head(df2)
+
+#Problem 2b
+library(ggplot2)
+ggplot(df2, aes(x=values, fill = groupVar )) + 
+  geom_density(alpha=.3) +
+  xlim(-25,150) +
+  labs(x='Values', y='Density', title = 'Density distribution')
+
+#Problem 3
+# Load the housing data, allow for header, and remove the ID column(not relevant)
+house <- read.csv("~/DSA -Homework 2/housingData.csv", header=TRUE)
+rownames (house) <- house [,1]
+house <- house [,-1]
+# Then read through the pdf for the housingData variable explanation, 
+# used the summary function to the overall data
+
+# Find the missing values for each variable to see if they need to be 
+# removed or kept/imputed
+colSums(is.na(house))
+# Some of the missing variable seem to correlate to the missingness in other 
+# variable such as
+# BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2
+# GarageType, GarageYrBlt, GarageFinish, GarageQual, GarageCond, 
+gg_miss_upset(house, nsets = n_var_miss(house))
+# We can see the link between the missing value from this graph
+
+house$MSSubClass <- factor(house$MSSubClass)
+# We convert MSSubClass with the factor function as this is a categorical variable
+
+# Data Visualization 1
+p <- ggplot(house,aes(x=LotArea, y=SalePrice, colour = BldgType)) +
+  geom_line() +
+  theme_bw() +
+  labs(x='Lot Area Size', y='Sale Price', title= 'Sale Price as a function of Lot Size')
+q <- ggplot(house,aes(x=LotArea, y=SalePrice, colour = MSZoning)) +
+  geom_line() +
+  theme_bw() +
+  labs(x='Lot Area Size', y='Sale Price', title= 'Sale Price as a function of Lot Size')
+grid.arrange(p,q, nrow=2)
+# We can similarity in MSZoning and Building Type, a good hypothesis 
+# would be that the building type depends on the MS Zone
+
+# Data Visualization 2
+ggplot(house, aes(x=LotArea, fill=MSSubClass)) +
+  geom_histogram(bins=5) +
+  theme_solarized() +
+  labs(x=' Lot Area size', y= 'Sold units', title = 'Distribution of sold unit based on their Lot Size')
+# To observe if there is any potential link to buying trend with the Lot Size
+
+# Data Visualization 3
+ggplot(house) +
+  geom_point(alpha =0.5, position = 'jitter', mapping =aes(x=LotArea, y=SalePrice)) +
+  facet_wrap(~ MSSubClass, nrow = 4) +
+  geom_smooth(mapping= aes(x = LotArea, y = SalePrice)) +
+  labs(x= 'Lot Area size', y='Sale Price', title='The relationship between Sale Price and Lot Size for each MSSubClass')
+# Relationship between Lot Size and Selling Price
+
+# Data Visualization 4
+ggplot(house, aes(x=MoSold, fill=MSZoning)) +
+  geom_histogram(bins=12) +
+  facet_wrap(~ YrSold, nrow = 3) +
+  labs(x = 'Month Sold', y = 'Total unit sold',title = 'Distribution of sold houses based on months and years') +
+  scale_fill_brewer(direction = -2) + 
+  theme_dark()
+# Distribution of the sold units according to months and years
+
+# Data Visualization 5
+z <- data.frame(table(house$BldgType))
+pie(z$Freq, labels = round(100*z$Freq/sum(z$Freq), 1), main = "Building Type sold",col = rainbow(length(z$Freq)))
+legend("topright", c("1Fam","TwnhsE","Twnhs","Duplex","2fmCon"), cex = 1,
+       fill = rainbow(length(z$Freq)))
+# Pie chart showing the distribution of sold houses based on their Building Type
+
+#Problem 4
+#Problem 4a
+data("freetrade", package="Amelia") # load the data using data command
+trade <- freetrade
+
+missmap(trade)
+# Missing data distribution in the data frame
+#trade[!complete.cases(trade),] ...uncomment if you want to see all missing data rows
+
+colSums(is.na(trade))
+# Summarize the missing data count for each variable
+
+gg_miss_upset(trade, nsets = n_var_miss(trade))
+# Gives a plot of missing variables and if the missing variables 
+# are related by observations
+
+matrixplot(trade)
+# Missing data visualization
+
+j <- as.data.frame(abs(is.na(trade)))
+o <- j[,sapply(j, sd) > 0]
+cor(o)
+# Correlation matrix between all missing data
+
+cor(trade$tariff, o, use = "pairwise.complete.obs")
+cor(trade$polity, o, use = "pairwise.complete.obs")
+cor(trade$pop, o, use = "pairwise.complete.obs")
+cor(trade$gdp.pc, o, use = "pairwise.complete.obs")
+cor(trade$intresmi, o, use = "pairwise.complete.obs")
+cor(trade$fiveop, o, use = "pairwise.complete.obs")
+cor(trade$usheg, o, use = "pairwise.complete.obs")
+# Correlation of missing values and observed variables
+# (but only if the observed variables are numeric)
+
+#Problem 4 b
+Miss <- rep ("0", nrow(trade )) 
+Miss [is.na(trade$tariff) == TRUE] <- "1" 
+Miss <- as.factor (Miss)  
+trade <- data.frame(trade ,Miss)
+# Created a logic variable for missing data in tariff variable
+
+tradetest <- select(trade,c(country, Miss)) 
+# a new dataframe consisting of only tariff and country
+chisq.test(table(tradetest$Miss,tradetest$country))
+# The p-value is way small (if we were to take a 0.01 significance value), 
+# then the null hypothesis that the variable tariff and country are 
+# independent is rejected
+
+tradetest1 <- select(filter(tradetest,country!='Nepal'), c(country,Miss)) 
+#new dataframe similar to above except rows with 'Nepal' is removed
+chisq.test(table(tradetest1$Miss,tradetest1$country))
+# obvious change in the p-value...in fact higher than 0.01 significance level; 
+# it is probable that the variable
+# tariff and country is not related in this case
+
+tradetest2 <- select(filter(tradetest,country!='Philipines'), c(country,Miss)) 
+# new data frame with 'Philipines removed instead
+chisq.test(table(tradetest2$Miss,tradetest2$country))  
+# slight change in the p-value as compared to the original chi-square test...
+# well smaller than the significane level of 0.01
+# In conclusion, the statistical test shows that the variable tariff and country
+# are related because mainly most of the missingvalues are populated in 
+# rows of country where it's Nepal
+# Safe to assume the tariff is not able to be obtained for Nepal due to some challenges
+
+
+```
+
+
